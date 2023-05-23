@@ -23,7 +23,15 @@ class Presupuesto {
   }
   nuevoGasto(gasto){
     this.gastos = [...this.gastos, gasto]
-    console.log(this.gastos);
+    this.calcularRestante()
+  }
+  calcularRestante(){
+    const gastado = this.gastos.reduce( (total, gasto) => total + gasto.cantidad, 0 )
+    this.restante = this.presupuesto - gastado
+  }
+  eliminarGasto(id){
+    this.gastos = this.gastos.filter( gasto => gasto.id !== id )
+    this.calcularRestante()
   }
 }
 
@@ -51,7 +59,7 @@ class UI {
         divMensaje.remove()
       }, 3000);
     }
-    agregarGastoListado(gastos){
+    mostrarGastos(gastos){
       this.limpiarHTML() //Elimina HTML previo
       // Iterar sobre los gastos 
       gastos.forEach(gasto => {
@@ -61,22 +69,53 @@ class UI {
         nuevoGasto.className = 'list-group-item d-flex justify-content-between align-items-center'
         nuevoGasto.dataset.id = id
         // Agregar el gasto al HTML
-        nuevoGasto.innerHTML = ` ${nombre} <span class="badge badge-primary badge-pill">${cantidad}</span>
+        nuevoGasto.innerHTML = ` ${nombre} <span class="badge badge-primary badge-pill">$${cantidad}</span>
         `
         // Boton de borrado
         const btnBorrar = document.createElement("button");
         btnBorrar.classList.add("btn", "btn-danger", "borrar-gasto")
         btnBorrar.innerHTML = "Borrar &times"
+        btnBorrar.onclick= ()=>{
+          // Lo hago asi xq sino, estas sintaxis         btnBorrar.onclick= eliminarGasto() lo llamaria ahi nomas
+          eliminarGasto(id)
+        } 
         nuevoGasto.appendChild(btnBorrar)
         // Agregar el boton al HTML
         gastoListado.appendChild(nuevoGasto)
       });
     }
-      limpiarHTML ( ) {
+    limpiarHTML ( ) {
       while(gastoListado.firstChild){
         gastoListado.removeChild(gastoListado.firstChild)
       }
+    }
+    actualizarRestante(restante){
+      document.querySelector("#restante").textContent = restante
+    }
+    comprobarPresupuesto(presupuestoObj){
+      const{ presupuesto, restante } = presupuestoObj
+      const restanteDiv = document.querySelector('.restante')
+      // comprobar 25% 
+      let porcentaje25 = presupuesto * 0.25
+      if( porcentaje25 > restante ) {
+        restanteDiv.classList.remove('alert-success','alert-warning')
+        restanteDiv.classList.add('alert-danger')
+      } else if( (presupuesto*.50) > restante ){
+        restanteDiv.classList.remove('alert-succes')
+        restanteDiv.classList.add('alert-warning')
+      }else{
+        restanteDiv.classList.remove('alert-danger', 'alert-warning')
+        restanteDiv.classList.add('alert-success')
       }
+
+      // Si el total es menor a 0
+      if(restante <= 0 ){
+        ui.imprimirAlerta('El presupuesto se ha agotado', "error")
+        formulario.querySelector('button[type="submit"]').disabled = true;
+      } 
+    }
+
+
 
 }
 
@@ -126,8 +165,20 @@ function agregarGasto(e){
   // Mensaje exitoo
   ui.imprimirAlerta("Gasto agregado correctamente")
   // Imprimir los gastos 
-  const { gastos } = presupuesto
-  ui.agregarGastoListado(gastos)
+  const { gastos, restante } = presupuesto
+  // ui.agregarGastoListado(gastos)
+  ui.mostrarGastos(gastos)
+  ui.actualizarRestante(restante)
+  ui.comprobarPresupuesto(presupuesto)
   // Reinicio del formulario
   formulario.reset()
+}
+function eliminarGasto(id) {
+  // Elimina del objeto
+  presupuesto.eliminarGasto(id);
+  // Elimina gastos HTML
+  const { gastos, restante } = presupuesto
+  ui.mostrarGastos(gastos)
+  ui.actualizarRestante(restante)
+  ui.comprobarPresupuesto(presupuesto)
 }
